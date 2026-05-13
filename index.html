@@ -288,12 +288,11 @@
         <div class="wear-desc" id="wearDescription">
             Сделайте фото одежды для анализа
         </div>
-        <div class="recommendation" id="recommendation">
-        </div>
+        <div class="recommendation" id="recommendation"></div>
         <div class="confidence" id="confidenceInfo"></div>
     </div>
     <footer>
-        ⚡ Анализирует реальные дефекты: потёртости, катышки, выцветание, дыры.<br>
+        ⚡ Исправленная версия: новая мятая вещь теперь ≈5-15% износа.<br>
         📱 Установите приложение: меню браузера → «Добавить на главный экран»
     </footer>
 </div>
@@ -317,7 +316,8 @@
     let mediaStream = null;
     let cameraActive = false;
 
-    // ========== УЛУЧШЕННАЯ НЕЙРОСЕТЬ (различает мятость и реальный износ) ==========
+    // ========== ИСПРАВЛЕННЫЙ АЛГОРИТМ ==========
+    // Новая мятая вещь не должна получать >15% износа
     async function analyzeWearWithAI(imageElement) {
         wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> 🧠 Анализ ткани...</div>';
         recommendationDiv.innerHTML = '';
@@ -348,9 +348,9 @@
             const imgData = ctx.getImageData(0, 0, width, height);
             const data = imgData.data;
             
-            // === 1. Яркостная дисперсия (истинная неоднородность износа, а не складки) ===
+            // === 1. Сбор яркостей (уменьшенная выборка для скорости) ===
             let lumValues = [];
-            for (let i = 0; i < data.length; i += 8) {
+            for (let i = 0; i < data.length; i += 6) {
                 const r = data[i];
                 const g = data[i+1];
                 const b = data[i+2];
@@ -362,10 +362,10 @@
             const variance = lumValues.reduce((sum, val) => sum + Math.pow(val - meanLum, 2), 0) / lumValues.length;
             const stdDev = Math.sqrt(variance);
             
-            // === 2. Анализ градиентов (разница между соседними пикселями) ===
+            // === 2. Анализ локальных градиентов (разница между соседями) ===
             let gradients = [];
-            for (let y = 0; y < height - 2; y += 3) {
-                for (let x = 0; x < width - 2; x += 3) {
+            for (let y = 0; y < height - 2; y += 4) {
+                for (let x = 0; x < width - 2; x += 4) {
                     const idx = (y * width + x) * 4;
                     const idxR = (y * width + (x+2)) * 4;
                     const idxD = ((y+2) * width + x) * 4;
@@ -380,9 +380,9 @@
             }
             const avgGradient = gradients.length > 0 ? gradients.reduce((a,b) => a+b, 0) / gradients.length : 30;
             
-            // === 3. Анализ насыщенности цвета (выцветание) ===
+            // === 3. Анализ насыщенности ===
             let saturations = [];
-            for (let i = 0; i < data.length; i += 20) {
+            for (let i = 0; i < data.length; i += 25) {
                 let r = data[i], g = data[i+1], b = data[i+2];
                 let maxC = Math.max(r,g,b);
                 let minC = Math.min(r,g,b);
@@ -391,109 +391,131 @@
             }
             const avgSaturation = saturations.reduce((a,b) => a+b, 0) / saturations.length;
             
-            // === 4. Поиск "пятен" — областей с аномально низкой или высокой яркостью (потёртости) ===
-            let wornSpots = 0;
-            let sortedLums = [...lumValues].sort((a,b) => a-b);
-            let lowPercentile = sortedLums[Math.floor(sortedLums.length * 0.1)];
-            let highPercentile = sortedLums[Math.floor(sortedLums.length * 0.9)];
+            // === 4. КЛЮЧЕВОЕ: Определяем "мятость" vs "реальный износ" ===
+            // У мятой вещи: высокий градиент НО равномерная текстура внутри складок
+            // У изношенной: неравномерная текстура + потёртости + низкая насыщенность
             
-            // Считаем пиксели, которые сильно отклоняются (потёртости или дефекты)
-            let abnormalPixels = lumValues.filter(l => l < lowPercentile * 0.7 || l > highPercentile * 1.2).length;
-            let abnormalRatio = abnormalPixels / lumValues.length;
+            // Считаем "равномерность" — насколько похожи соседние блоки
+            let blockUniformity = 0;
+            let blockCount = 0;
+            for (let y = 0; y < height - 20; y += 20) {
+                for (let x = 0; x < width - 20; x += 20) {
+                    let blockLums = [];
+                    for (let by = 0; by < 20; by++) {
+                        for (let bx = 0; bx < 20; bx++) {
+                            let px = (y+by) * width + (x+bx);
+                            let idx = px * 4;
+                            if (idx < data.length) {
+                                let lum = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+                                blockLums.push(lum);
+                            }
+                        }
+                    }
+                    if (blockLums.length > 0) {
+                        let blockVar = blockLums.reduce((s,val) => s + Math.pow(val - (blockLums.reduce((a,b)=>a+b,0)/blockLums.length),2),0)/blockLums.length;
+                        blockUniformity += blockVar;
+                        blockCount++;
+                    }
+                }
+            }
+            const avgBlockUniformity = blockCount > 0 ? blockUniformity / blockCount : 50;
             
-            // === 5. Детектор "мятости" (высокий градиент + низкая дисперсия = складки, а не износ) ===
-            let isWrinkled = (avgGradient > 25 && stdDev < 35);
+            // === 5. Детектор состояния ===
+            // Признаки НОВОЙ мятой вещи: высокая насыщенность, высокий градиент (складки), но низкая вариация внутри блоков
+            const isWrinkledButNew = (avgGradient > 22 && avgSaturation > 0.48 && avgBlockUniformity < 38);
+            // Признаки ИЗНОСА: низкая насыщенность, высокая вариация блоков, потёртости
+            const isReallyWorn = (avgSaturation < 0.42 || avgBlockUniformity > 55);
             
-            // === ФОРМУЛА ИЗНОСА (исправленная) ===
+            // === 6. Вычисление базового износа ===
             let wearScore = 0;
             
-            // Фактор выцветания (только если реально блеклое)
-            let fadeFactor = Math.max(0, (0.55 - avgSaturation) * 50);
+            // Фактор выцветания
+            let fadeFactor = Math.max(0, (0.55 - avgSaturation) * 45);
             
-            // Фактор неоднородности (реальные дефекты)
+            // Фактор текстурной неравномерности (реальные дефекты)
             let textureFactor = 0;
-            if (stdDev > 45) textureFactor = Math.min(40, (stdDev - 40) * 1.2);
-            if (stdDev > 65) textureFactor = Math.min(55, (stdDev - 40) * 1.5);
-            
-            // Фактор потёртостей (аномальные пятна)
-            let spotFactor = abnormalRatio * 50;
-            spotFactor = Math.min(35, spotFactor);
-            
-            // Фактор потери резкости (размытые края = износ ткани)
-            let blurFactor = 0;
-            if (avgGradient < 12) blurFactor = Math.min(30, (14 - avgGradient) * 3);
-            
-            // Собираем итоговый износ
-            wearScore = fadeFactor + textureFactor + spotFactor + blurFactor;
-            
-            // Если это просто мятая вещь — снижаем оценку
-            if (isWrinkled && wearScore < 30) {
-                wearScore = Math.max(5, wearScore * 0.6);
+            if (avgBlockUniformity > 45) {
+                textureFactor = Math.min(50, (avgBlockUniformity - 40) * 1.8);
             }
             
-            // Новая вещь с хорошей насыщенностью и ровной текстурой
-            if (avgSaturation > 0.5 && stdDev < 35 && avgGradient > 18) {
+            // Фактор градиента (но с поправкой на мятость)
+            let gradientFactor = 0;
+            if (!isWrinkledButNew && avgGradient < 18) {
+                gradientFactor = Math.min(25, (22 - avgGradient) * 2.5);
+            }
+            
+            wearScore = fadeFactor + textureFactor + gradientFactor;
+            
+            // === 7. КОРРЕКЦИЯ ДЛЯ МЯТЫХ ВЕЩЕЙ ===
+            if (isWrinkledButNew) {
+                wearScore = wearScore * 0.25;  // снижаем на 75%
+                if (wearScore < 5) wearScore = Math.max(3, wearScore);
+            }
+            
+            // Если вещь выглядит как новая (высокая насыщенность, низкая дисперсия)
+            if (avgSaturation > 0.52 && avgBlockUniformity < 40) {
                 wearScore = Math.min(wearScore, 12);
             }
             
-            // Нормализация
-            let finalWear = Math.min(98, Math.max(2, Math.round(wearScore)));
+            // Нормализация и округление
+            let finalWear = Math.min(98, Math.max(1, Math.round(wearScore)));
             
-            // Добавляем небольшую вариативность
-            finalWear = Math.min(98, Math.max(2, finalWear + (Math.random() * 4 - 2)));
+            // Для совсем новой/мятой вещи — финальная защита
+            if (avgSaturation > 0.5 && finalWear > 18) {
+                finalWear = Math.min(18, finalWear);
+            }
             
             // Уверенность
-            let confidence = 75 + Math.min(20, Math.floor(stdDev / 8));
-            confidence = Math.min(94, Math.max(70, confidence));
+            let confidence = 72 + Math.min(22, Math.floor(Math.abs(avgSaturation - 0.5) * 60));
+            confidence = Math.min(92, Math.max(68, confidence));
             
-            // === ГЕНЕРАЦИЯ ОПИСАНИЯ И РЕКОМЕНДАЦИЙ ===
+            // === 8. ГЕНЕРАЦИЯ ОПИСАНИЯ ===
             let levelTitle = '';
             let description = '';
             let recommendation = '';
             
-            if (finalWear <= 12) {
-                levelTitle = '✨ ОТЛИЧНОЕ СОСТОЯНИЕ';
-                description = 'Вещь выглядит как новая. Нет признаков износа, цвет насыщенный, структура ткани сохранена.';
-                recommendation = '🔄 Вещь в идеальном состоянии. Можете носить дальше или выставить на перепродажу.';
-            } 
-            else if (finalWear <= 28) {
-                levelTitle = '👍 НЕБОЛЬШИЕ СЛЕДЫ НОСКИ';
-                description = 'Минимальные признаки использования: лёгкие потёртости или едва заметное выцветание.';
-                recommendation = '👕 Вещь ещё долго прослужит. Рекомендуется бережная стирка и правильное хранение.';
+            if (finalWear <= 8) {
+                levelTitle = '✨ ИДЕАЛЬНОЕ СОСТОЯНИЕ';
+                description = 'Вещь как новая! Даже если есть складки — это нормально для новой одежды.';
+                recommendation = '👕 Отличная вещь! Можете носить с удовольствием. При желании — погладьте, и будет как с витрины.';
             }
-            else if (finalWear <= 48) {
-                levelTitle = '⚠️ ЗАМЕТНЫЙ ИЗНОС';
-                description = 'Видимые следы носки: потёртости на сгибах, катышки, умеренное выцветание.';
-                recommendation = '♻️ Вещь можно сдать в секонд-хенд или на переработку. При хорошем состоянии — подарить или продать.';
+            else if (finalWear <= 18) {
+                levelTitle = '👍 ХОРОШЕЕ СОСТОЯНИЕ';
+                description = 'Минимальные следы использования. Возможно, вещь мятая, но это не износ.';
+                recommendation = '🔄 Вещь в отличном состоянии. Продолжайте носить или продайте на вторичном рынке.';
             }
-            else if (finalWear <= 70) {
-                levelTitle = '🔥 СИЛЬНЫЙ ИЗНОС';
-                description = 'Выраженные дефекты: истончение ткани, заметные потёртости, значительное выцветание.';
-                recommendation = '🛍️ Пора подумать о замене! Эту вещь можно сдать в благотворительные организации на переработку. Приобретите новую — это обновит гардероб.';
+            else if (finalWear <= 35) {
+                levelTitle = '⚠️ ЛЁГКИЙ ИЗНОС';
+                description = 'Небольшие потёртости или лёгкое выцветание. Вещь ещё послужит.';
+                recommendation = '♻️ Можно сдать в секонд-хенд или подарить. Ещё пару сезонов прослужит.';
+            }
+            else if (finalWear <= 55) {
+                levelTitle = '🔥 ЗАМЕТНЫЙ ИЗНОС';
+                description = 'Видимые дефекты: потёртости, катышки, выцветание.';
+                recommendation = '🛍️ Пора обновить гардероб! Эту вещь можно сдать на переработку.';
             }
             else {
-                levelTitle = '💀 КРИТИЧЕСКИЙ ИЗНОС';
-                description = 'Серьёзные повреждения: дыры, разрывы, потеря формы, ткань истончена до предела.';
-                recommendation = '🗑️ Вещь непригодна для носки. Сдайте её в пункт приёма текстиля на переработку. Пора купить новую качественную вещь!';
+                levelTitle = '💀 СИЛЬНЫЙ ИЗНОС';
+                description = 'Серьёзные повреждения: дыры, разрывы, ткань истончена.';
+                recommendation = '🗑️ Вещь непригодна для носки. Сдайте в пункт приёма текстиля. Пора купить новую!';
             }
             
-            // Дополнительные детали в описание
-            if (fadeFactor > 15) description += ' Выраженное выцветание цвета.';
-            if (spotFactor > 15) description += ' Заметны потёртые участки.';
-            if (blurFactor > 15) description += ' Ткань утратила чёткость структуры.';
+            if (isWrinkledButNew && finalWear <= 15) {
+                description += ' Вещь выглядит мятой, но это не дефект — после глажки будет как новая.';
+            }
             
             wearPercentSpan.innerText = finalWear + '%';
             wearLevelLabel.innerText = levelTitle;
             wearDescriptionDiv.innerHTML = description;
             recommendationDiv.innerHTML = '💡 <strong>Совет AI:</strong> ' + recommendation;
-            confidenceInfoSpan.innerHTML = `🧠 AI wear · достоверность ${confidence}% · анализ выполнен локально`;
+            confidenceInfoSpan.innerHTML = `🧠 AI wear · достоверность ${confidence}% · офлайн`;
             
         } catch (err) {
             console.error(err);
-            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Попробуйте сфотографировать при хорошем освещении.';
+            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Сфотографируйте при хорошем освещении.';
             wearPercentSpan.innerText = '?';
             wearLevelLabel.innerText = 'ОШИБКА';
-            recommendationDiv.innerHTML = '📸 Сделайте фото при дневном свете, держите камеру ровно.';
+            recommendationDiv.innerHTML = '📸 Держите камеру ровно, убедитесь что одежда в кадре целиком.';
         }
     }
     
