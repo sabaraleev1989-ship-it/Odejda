@@ -1,0 +1,23 @@
+{
+  "name": "AI wear",
+  "short_name": "AI wear",
+  "description": "Анализ износа одежды через камеру. Нейросеть работает офлайн.",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0a0c12",
+  "background_color": "#0a0c12",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
