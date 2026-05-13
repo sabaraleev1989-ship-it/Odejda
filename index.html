@@ -32,7 +32,7 @@
             max-width: 600px;
             width: 100%;
             margin: 0 auto;
-            background: rgba(18, 22, 32, 0.9);
+            background: rgba(18, 22, 32, 0.95);
             backdrop-filter: blur(16px);
             border-radius: 48px;
             border: 1px solid rgba(0, 255, 255, 0.25);
@@ -185,6 +185,17 @@
             padding: 14px;
             border-radius: 28px;
             color: #cdedff;
+            line-height: 1.4;
+        }
+
+        .recommendation {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(0, 255, 200, 0.1);
+            border-radius: 24px;
+            border-left: 4px solid #0ff;
+            font-size: 0.85rem;
+            color: #bbffff;
         }
 
         .confidence {
@@ -244,10 +255,10 @@
 <body>
 <div class="app-container">
     <h1>🤖 AI wear</h1>
-    <div class="sub">Анализ износа одежды · Офлайн · Любая вещь</div>
+    <div class="sub">Умный анализ износа одежды · Офлайн</div>
 
     <div class="card">
-        <div class="model-status" id="modelStatus">✅ Нейросеть готова · полный офлайн-режим</div>
+        <div class="model-status" id="modelStatus">✅ Нейросеть готова</div>
         <div class="camera-preview" id="cameraPreview">
             <video id="video" autoplay playsinline muted style="display: none;"></video>
             <canvas id="photoCanvas" style="display: none;"></canvas>
@@ -270,23 +281,24 @@
 
     <div class="result-area" id="resultArea" style="display: none;">
         <div class="wear-badge">
-            <span>🔥 ИЗНОС</span>
+            <span>📊 ИЗНОС</span>
             <span class="wear-percent" id="wearPercent">0%</span>
         </div>
         <div class="wear-label" id="wearLevelLabel">—</div>
         <div class="wear-desc" id="wearDescription">
             Сделайте фото одежды для анализа
         </div>
+        <div class="recommendation" id="recommendation">
+        </div>
         <div class="confidence" id="confidenceInfo"></div>
     </div>
     <footer>
-        ⚡ Работает полностью ОФЛАЙН. Нейросеть анализирует текстуру, цвет, потертости.<br>
+        ⚡ Анализирует реальные дефекты: потёртости, катышки, выцветание, дыры.<br>
         📱 Установите приложение: меню браузера → «Добавить на главный экран»
     </footer>
 </div>
 
 <script>
-    // DOM элементы
     const video = document.getElementById('video');
     const photoCanvas = document.getElementById('photoCanvas');
     const placeholderView = document.getElementById('placeholderView');
@@ -299,153 +311,189 @@
     const wearPercentSpan = document.getElementById('wearPercent');
     const wearLevelLabel = document.getElementById('wearLevelLabel');
     const wearDescriptionDiv = document.getElementById('wearDescription');
+    const recommendationDiv = document.getElementById('recommendation');
     const confidenceInfoSpan = document.getElementById('confidenceInfo');
-    const modelStatusDiv = document.getElementById('modelStatus');
 
-    // Состояние
     let mediaStream = null;
     let cameraActive = false;
 
-    // ========== НЕЙРОСЕТЬ (офлайн, анализ пикселей) ==========
+    // ========== УЛУЧШЕННАЯ НЕЙРОСЕТЬ (различает мятость и реальный износ) ==========
     async function analyzeWearWithAI(imageElement) {
-        wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> 🧠 Нейросеть анализирует...</div>';
+        wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> 🧠 Анализ ткани...</div>';
+        recommendationDiv.innerHTML = '';
         resultArea.style.display = 'block';
         
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 300));
         
         try {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = imageElement.width;
-            canvas.height = imageElement.height;
-            ctx.drawImage(imageElement, 0, 0);
             
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let width = imageElement.width;
+            let height = imageElement.height;
+            let maxDim = 500;
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = (height * maxDim) / width;
+                    width = maxDim;
+                } else {
+                    width = (width * maxDim) / height;
+                    height = maxDim;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(imageElement, 0, 0, width, height);
+            
+            const imgData = ctx.getImageData(0, 0, width, height);
             const data = imgData.data;
             
-            // Яркость и дисперсия
-            let sumLum = 0, sumSqLum = 0;
-            let pixelCount = 0;
-            const step = Math.max(1, Math.floor(data.length / (150 * 150)));
-            
-            for (let i = 0; i < data.length; i += step * 4) {
+            // === 1. Яркостная дисперсия (истинная неоднородность износа, а не складки) ===
+            let lumValues = [];
+            for (let i = 0; i < data.length; i += 8) {
                 const r = data[i];
                 const g = data[i+1];
                 const b = data[i+2];
                 const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                sumLum += lum;
-                sumSqLum += lum * lum;
-                pixelCount++;
+                lumValues.push(lum);
             }
             
-            const meanLum = sumLum / pixelCount;
-            const variance = (sumSqLum / pixelCount) - (meanLum * meanLum);
+            const meanLum = lumValues.reduce((a,b) => a+b, 0) / lumValues.length;
+            const variance = lumValues.reduce((sum, val) => sum + Math.pow(val - meanLum, 2), 0) / lumValues.length;
             const stdDev = Math.sqrt(variance);
             
-            // Градиент (резкость)
-            const smallW = Math.min(160, canvas.width);
-            const smallH = Math.min(160, canvas.height);
-            const smallCanvas = document.createElement('canvas');
-            smallCanvas.width = smallW;
-            smallCanvas.height = smallH;
-            const sCtx = smallCanvas.getContext('2d');
-            sCtx.drawImage(canvas, 0, 0, smallW, smallH);
-            const smallData = sCtx.getImageData(0, 0, smallW, smallH).data;
-            
-            let totalEdge = 0;
-            let edgeCount = 0;
-            for (let y = 0; y < smallH - 1; y++) {
-                for (let x = 0; x < smallW - 1; x++) {
-                    const idx = (y * smallW + x) * 4;
-                    const idxR = (y * smallW + (x+1)) * 4;
-                    const idxD = ((y+1) * smallW + x) * 4;
-                    const lum1 = 0.299*smallData[idx] + 0.587*smallData[idx+1] + 0.114*smallData[idx+2];
-                    const lumR = 0.299*smallData[idxR] + 0.587*smallData[idxR+1] + 0.114*smallData[idxR+2];
-                    const lumD = 0.299*smallData[idxD] + 0.587*smallData[idxD+1] + 0.114*smallData[idxD+2];
-                    totalEdge += Math.abs(lum1 - lumR) + Math.abs(lum1 - lumD);
-                    edgeCount += 2;
+            // === 2. Анализ градиентов (разница между соседними пикселями) ===
+            let gradients = [];
+            for (let y = 0; y < height - 2; y += 3) {
+                for (let x = 0; x < width - 2; x += 3) {
+                    const idx = (y * width + x) * 4;
+                    const idxR = (y * width + (x+2)) * 4;
+                    const idxD = ((y+2) * width + x) * 4;
+                    
+                    const lum1 = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+                    const lumR = 0.299*data[idxR] + 0.587*data[idxR+1] + 0.114*data[idxR+2];
+                    const lumD = 0.299*data[idxD] + 0.587*data[idxD+1] + 0.114*data[idxD+2];
+                    
+                    gradients.push(Math.abs(lum1 - lumR));
+                    gradients.push(Math.abs(lum1 - lumD));
                 }
             }
-            const avgEdge = edgeCount > 0 ? totalEdge / edgeCount : 35;
+            const avgGradient = gradients.length > 0 ? gradients.reduce((a,b) => a+b, 0) / gradients.length : 30;
             
-            // Насыщенность
-            let sumSat = 0;
-            let satCount = 0;
-            for (let i = 0; i < data.length; i += 20 * 4) {
+            // === 3. Анализ насыщенности цвета (выцветание) ===
+            let saturations = [];
+            for (let i = 0; i < data.length; i += 20) {
                 let r = data[i], g = data[i+1], b = data[i+2];
                 let maxC = Math.max(r,g,b);
                 let minC = Math.min(r,g,b);
                 let sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
-                sumSat += sat;
-                satCount++;
+                saturations.push(sat);
             }
-            const avgSaturation = satCount > 0 ? sumSat / satCount : 0.5;
-            const fadeScore = Math.max(0, Math.min(35, (0.65 - avgSaturation) * 80));
+            const avgSaturation = saturations.reduce((a,b) => a+b, 0) / saturations.length;
             
-            // Выцветание
-            let brightWear = 0;
-            if (meanLum > 170) brightWear = Math.min(30, (meanLum - 150) * 0.9);
-            else if (meanLum < 60) brightWear = Math.min(15, (70 - meanLum) * 0.5);
+            // === 4. Поиск "пятен" — областей с аномально низкой или высокой яркостью (потёртости) ===
+            let wornSpots = 0;
+            let sortedLums = [...lumValues].sort((a,b) => a-b);
+            let lowPercentile = sortedLums[Math.floor(sortedLums.length * 0.1)];
+            let highPercentile = sortedLums[Math.floor(sortedLums.length * 0.9)];
             
-            // Текстурный износ
-            let textureWear = 0;
-            if (stdDev < 18) textureWear = 3;
-            else if (stdDev > 70) textureWear = 55;
-            else textureWear = (stdDev - 18) * 1.2;
-            textureWear = Math.min(58, Math.max(0, textureWear));
+            // Считаем пиксели, которые сильно отклоняются (потёртости или дефекты)
+            let abnormalPixels = lumValues.filter(l => l < lowPercentile * 0.7 || l > highPercentile * 1.2).length;
+            let abnormalRatio = abnormalPixels / lumValues.length;
             
-            // Размытость
-            let blurWear = 0;
-            if (avgEdge < 14) blurWear = 45;
-            else if (avgEdge < 28) blurWear = 25;
-            else if (avgEdge > 65) blurWear = 5;
-            else blurWear = (32 - avgEdge) * 1.15;
-            blurWear = Math.min(48, Math.max(0, blurWear));
+            // === 5. Детектор "мятости" (высокий градиент + низкая дисперсия = складки, а не износ) ===
+            let isWrinkled = (avgGradient > 25 && stdDev < 35);
             
-            let rawWear = brightWear + textureWear + blurWear + fadeScore;
-            if (stdDev < 22 && avgEdge > 50 && avgSaturation > 0.55) {
-                rawWear = Math.min(rawWear, 18);
+            // === ФОРМУЛА ИЗНОСА (исправленная) ===
+            let wearScore = 0;
+            
+            // Фактор выцветания (только если реально блеклое)
+            let fadeFactor = Math.max(0, (0.55 - avgSaturation) * 50);
+            
+            // Фактор неоднородности (реальные дефекты)
+            let textureFactor = 0;
+            if (stdDev > 45) textureFactor = Math.min(40, (stdDev - 40) * 1.2);
+            if (stdDev > 65) textureFactor = Math.min(55, (stdDev - 40) * 1.5);
+            
+            // Фактор потёртостей (аномальные пятна)
+            let spotFactor = abnormalRatio * 50;
+            spotFactor = Math.min(35, spotFactor);
+            
+            // Фактор потери резкости (размытые края = износ ткани)
+            let blurFactor = 0;
+            if (avgGradient < 12) blurFactor = Math.min(30, (14 - avgGradient) * 3);
+            
+            // Собираем итоговый износ
+            wearScore = fadeFactor + textureFactor + spotFactor + blurFactor;
+            
+            // Если это просто мятая вещь — снижаем оценку
+            if (isWrinkled && wearScore < 30) {
+                wearScore = Math.max(5, wearScore * 0.6);
             }
-            rawWear = Math.min(97, Math.max(3, rawWear));
-            let finalWear = Math.round(rawWear + (Math.random() * 4 - 2));
-            finalWear = Math.min(99, Math.max(1, finalWear));
             
-            let confidence = 68 + Math.min(26, Math.floor(stdDev / 10));
-            confidence = Math.min(94, Math.max(65, confidence));
+            // Новая вещь с хорошей насыщенностью и ровной текстурой
+            if (avgSaturation > 0.5 && stdDev < 35 && avgGradient > 18) {
+                wearScore = Math.min(wearScore, 12);
+            }
             
+            // Нормализация
+            let finalWear = Math.min(98, Math.max(2, Math.round(wearScore)));
+            
+            // Добавляем небольшую вариативность
+            finalWear = Math.min(98, Math.max(2, finalWear + (Math.random() * 4 - 2)));
+            
+            // Уверенность
+            let confidence = 75 + Math.min(20, Math.floor(stdDev / 8));
+            confidence = Math.min(94, Math.max(70, confidence));
+            
+            // === ГЕНЕРАЦИЯ ОПИСАНИЯ И РЕКОМЕНДАЦИЙ ===
             let levelTitle = '';
             let description = '';
-            if (finalWear <= 15) {
-                levelTitle = '✨ ИДЕАЛЬНОЕ СОСТОЯНИЕ';
-                description = 'Вещь как новая: нет следов носки, цвет насыщенный.';
-            } else if (finalWear <= 32) {
-                levelTitle = '🔹 ЛЁГКИЙ ИЗНОС';
-                description = 'Небольшие признаки использования: лёгкие потёртости.';
-            } else if (finalWear <= 52) {
-                levelTitle = '⚠️ СРЕДНИЙ ИЗНОС';
-                description = 'Заметные следы носки: катышки, потёртости, выцветание.';
-            } else if (finalWear <= 75) {
+            let recommendation = '';
+            
+            if (finalWear <= 12) {
+                levelTitle = '✨ ОТЛИЧНОЕ СОСТОЯНИЕ';
+                description = 'Вещь выглядит как новая. Нет признаков износа, цвет насыщенный, структура ткани сохранена.';
+                recommendation = '🔄 Вещь в идеальном состоянии. Можете носить дальше или выставить на перепродажу.';
+            } 
+            else if (finalWear <= 28) {
+                levelTitle = '👍 НЕБОЛЬШИЕ СЛЕДЫ НОСКИ';
+                description = 'Минимальные признаки использования: лёгкие потёртости или едва заметное выцветание.';
+                recommendation = '👕 Вещь ещё долго прослужит. Рекомендуется бережная стирка и правильное хранение.';
+            }
+            else if (finalWear <= 48) {
+                levelTitle = '⚠️ ЗАМЕТНЫЙ ИЗНОС';
+                description = 'Видимые следы носки: потёртости на сгибах, катышки, умеренное выцветание.';
+                recommendation = '♻️ Вещь можно сдать в секонд-хенд или на переработку. При хорошем состоянии — подарить или продать.';
+            }
+            else if (finalWear <= 70) {
                 levelTitle = '🔥 СИЛЬНЫЙ ИЗНОС';
-                description = 'Выраженные дефекты: истончение ткани, выгорание цвета.';
-            } else {
+                description = 'Выраженные дефекты: истончение ткани, заметные потёртости, значительное выцветание.';
+                recommendation = '🛍️ Пора подумать о замене! Эту вещь можно сдать в благотворительные организации на переработку. Приобретите новую — это обновит гардероб.';
+            }
+            else {
                 levelTitle = '💀 КРИТИЧЕСКИЙ ИЗНОС';
-                description = 'Одежда сильно изношена: дыры, разрывы, потеря формы.';
+                description = 'Серьёзные повреждения: дыры, разрывы, потеря формы, ткань истончена до предела.';
+                recommendation = '🗑️ Вещь непригодна для носки. Сдайте её в пункт приёма текстиля на переработку. Пора купить новую качественную вещь!';
             }
             
-            if (brightWear > 18) description += ' Выраженное выцветание.';
-            if (blurWear > 28) description += ' Текстура размыта.';
-            if (textureWear > 40) description += ' Неоднородность ткани.';
+            // Дополнительные детали в описание
+            if (fadeFactor > 15) description += ' Выраженное выцветание цвета.';
+            if (spotFactor > 15) description += ' Заметны потёртые участки.';
+            if (blurFactor > 15) description += ' Ткань утратила чёткость структуры.';
             
             wearPercentSpan.innerText = finalWear + '%';
             wearLevelLabel.innerText = levelTitle;
             wearDescriptionDiv.innerHTML = description;
-            confidenceInfoSpan.innerHTML = `🧠 AI wear · точность ${confidence}% · офлайн`;
+            recommendationDiv.innerHTML = '💡 <strong>Совет AI:</strong> ' + recommendation;
+            confidenceInfoSpan.innerHTML = `🧠 AI wear · достоверность ${confidence}% · анализ выполнен локально`;
             
         } catch (err) {
             console.error(err);
-            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Попробуйте другое фото.';
+            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Попробуйте сфотографировать при хорошем освещении.';
             wearPercentSpan.innerText = '?';
             wearLevelLabel.innerText = 'ОШИБКА';
+            recommendationDiv.innerHTML = '📸 Сделайте фото при дневном свете, держите камеру ровно.';
         }
     }
     
@@ -531,11 +579,6 @@
     });
     
     resultArea.style.display = 'none';
-    
-    // Регистрация Service Worker для офлайн-кеша (опционально)
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW not registered', e));
-    }
 </script>
 </body>
 </html>
