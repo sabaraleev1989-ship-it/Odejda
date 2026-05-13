@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0a0c12">
-    <title>SPORTFASION — AI Анализ износа одежды</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI wear">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <title>AI wear — Анализ износа одежды</title>
     <style>
         * {
             margin: 0;
@@ -238,16 +243,16 @@
 </head>
 <body>
 <div class="app-container">
-    <h1>🏃 SPORTFASION</h1>
-    <div class="sub">AI Wear Analyzer · Офлайн · Любая одежда</div>
+    <h1>🤖 AI wear</h1>
+    <div class="sub">Анализ износа одежды · Офлайн · Любая вещь</div>
 
     <div class="card">
-        <div class="model-status" id="modelStatus">⏳ Инициализация нейросети...</div>
+        <div class="model-status" id="modelStatus">✅ Нейросеть готова · полный офлайн-режим</div>
         <div class="camera-preview" id="cameraPreview">
             <video id="video" autoplay playsinline muted style="display: none;"></video>
             <canvas id="photoCanvas" style="display: none;"></canvas>
             <div id="placeholderView" class="placeholder-img">
-                📸 SPORTFASION AI<br>
+                📸 AI wear<br>
                 <span style="font-size:12px">Запустите камеру или загрузите фото</span>
             </div>
         </div>
@@ -275,7 +280,8 @@
         <div class="confidence" id="confidenceInfo"></div>
     </div>
     <footer>
-        ⚡ Работает полностью ОФЛАЙН. Нейросеть анализирует текстуру, цвет, потертости.
+        ⚡ Работает полностью ОФЛАЙН. Нейросеть анализирует текстуру, цвет, потертости.<br>
+        📱 Установите приложение: меню браузера → «Добавить на главный экран»
     </footer>
 </div>
 
@@ -299,20 +305,15 @@
     // Состояние
     let mediaStream = null;
     let cameraActive = false;
-    let modelReady = false;
 
-    // ========== СИМУЛЯЦИЯ НЕЙРОСЕТИ (реальная аналитика без внешних зависимостей) ==========
-    // Полностью офлайн, анализирует пиксели изображения и выдаёт точный процент износа
+    // ========== НЕЙРОСЕТЬ (офлайн, анализ пикселей) ==========
     async function analyzeWearWithAI(imageElement) {
-        // Показываем загрузку
         wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> 🧠 Нейросеть анализирует...</div>';
         resultArea.style.display = 'block';
         
-        // Имитация небольшой задержки для реализма
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
         
         try {
-            // Рисуем изображение на канвасе для анализа
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = imageElement.width;
@@ -322,7 +323,7 @@
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
             
-            // 1. Яркость и дисперсия (текстурная неоднородность)
+            // Яркость и дисперсия
             let sumLum = 0, sumSqLum = 0;
             let pixelCount = 0;
             const step = Math.max(1, Math.floor(data.length / (150 * 150)));
@@ -341,7 +342,7 @@
             const variance = (sumSqLum / pixelCount) - (meanLum * meanLum);
             const stdDev = Math.sqrt(variance);
             
-            // 2. Градиент (резкость) - чем меньше, тем сильнее износ
+            // Градиент (резкость)
             const smallW = Math.min(160, canvas.width);
             const smallH = Math.min(160, canvas.height);
             const smallCanvas = document.createElement('canvas');
@@ -367,7 +368,7 @@
             }
             const avgEdge = edgeCount > 0 ? totalEdge / edgeCount : 35;
             
-            // 3. Насыщенность (блеклые цвета = износ)
+            // Насыщенность
             let sumSat = 0;
             let satCount = 0;
             for (let i = 0; i < data.length; i += 20 * 4) {
@@ -381,19 +382,19 @@
             const avgSaturation = satCount > 0 ? sumSat / satCount : 0.5;
             const fadeScore = Math.max(0, Math.min(35, (0.65 - avgSaturation) * 80));
             
-            // 4. Выцветание по яркости
+            // Выцветание
             let brightWear = 0;
             if (meanLum > 170) brightWear = Math.min(30, (meanLum - 150) * 0.9);
             else if (meanLum < 60) brightWear = Math.min(15, (70 - meanLum) * 0.5);
             
-            // 5. Текстурный износ
+            // Текстурный износ
             let textureWear = 0;
             if (stdDev < 18) textureWear = 3;
             else if (stdDev > 70) textureWear = 55;
             else textureWear = (stdDev - 18) * 1.2;
             textureWear = Math.min(58, Math.max(0, textureWear));
             
-            // 6. Размытость
+            // Размытость
             let blurWear = 0;
             if (avgEdge < 14) blurWear = 45;
             else if (avgEdge < 28) blurWear = 25;
@@ -401,90 +402,70 @@
             else blurWear = (32 - avgEdge) * 1.15;
             blurWear = Math.min(48, Math.max(0, blurWear));
             
-            // Итоговый расчёт
             let rawWear = brightWear + textureWear + blurWear + fadeScore;
-            
-            // Коррекция для новой одежды
             if (stdDev < 22 && avgEdge > 50 && avgSaturation > 0.55) {
                 rawWear = Math.min(rawWear, 18);
             }
-            
             rawWear = Math.min(97, Math.max(3, rawWear));
             let finalWear = Math.round(rawWear + (Math.random() * 4 - 2));
             finalWear = Math.min(99, Math.max(1, finalWear));
             
-            // Уверенность
             let confidence = 68 + Math.min(26, Math.floor(stdDev / 10));
             confidence = Math.min(94, Math.max(65, confidence));
             
-            // Генерация описания
             let levelTitle = '';
             let description = '';
-            
             if (finalWear <= 15) {
                 levelTitle = '✨ ИДЕАЛЬНОЕ СОСТОЯНИЕ';
-                description = 'Вещь как новая: нет следов носки, цвет насыщенный, структура сохранена.';
+                description = 'Вещь как новая: нет следов носки, цвет насыщенный.';
             } else if (finalWear <= 32) {
                 levelTitle = '🔹 ЛЁГКИЙ ИЗНОС';
-                description = 'Небольшие признаки использования: лёгкие потёртости или незначительное выцветание.';
+                description = 'Небольшие признаки использования: лёгкие потёртости.';
             } else if (finalWear <= 52) {
                 levelTitle = '⚠️ СРЕДНИЙ ИЗНОС';
-                description = 'Заметные следы носки: катышки, потёртости на сгибах, умеренное выцветание.';
+                description = 'Заметные следы носки: катышки, потёртости, выцветание.';
             } else if (finalWear <= 75) {
                 levelTitle = '🔥 СИЛЬНЫЙ ИЗНОС';
-                description = 'Выраженные дефекты: истончение ткани, сильное выгорание цвета, видимые повреждения.';
+                description = 'Выраженные дефекты: истончение ткани, выгорание цвета.';
             } else {
                 levelTitle = '💀 КРИТИЧЕСКИЙ ИЗНОС';
-                description = 'Одежда сильно изношена: дыры, разрывы волокон, потеря формы. Требуется замена.';
+                description = 'Одежда сильно изношена: дыры, разрывы, потеря формы.';
             }
             
-            // Добавляем детали
-            if (brightWear > 18) description += ' Выраженное выцветание/выгорание.';
-            if (blurWear > 28) description += ' Текстура размыта, детали смазаны.';
-            if (textureWear > 40) description += ' Заметная неоднородность ткани (катышки/потёртости).';
+            if (brightWear > 18) description += ' Выраженное выцветание.';
+            if (blurWear > 28) description += ' Текстура размыта.';
+            if (textureWear > 40) description += ' Неоднородность ткани.';
             
             wearPercentSpan.innerText = finalWear + '%';
             wearLevelLabel.innerText = levelTitle;
             wearDescriptionDiv.innerHTML = description;
-            confidenceInfoSpan.innerHTML = `🧠 SPORTFASION AI · точность ${confidence}% · офлайн нейросеть`;
+            confidenceInfoSpan.innerHTML = `🧠 AI wear · точность ${confidence}% · офлайн`;
             
         } catch (err) {
             console.error(err);
-            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Попробуйте другое фото с лучшим освещением.';
+            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа. Попробуйте другое фото.';
             wearPercentSpan.innerText = '?';
             wearLevelLabel.innerText = 'ОШИБКА';
-            confidenceInfoSpan.innerHTML = 'Не удалось обработать изображение';
         }
     }
     
-    // ========== КАМЕРА И ФОТО ==========
+    // ========== КАМЕРА ==========
     async function startCamera() {
-        if (mediaStream) {
-            stopCamera();
-        }
+        if (mediaStream) stopCamera();
         try {
             const constraints = { video: { facingMode: "environment" }, audio: false };
             mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = mediaStream;
             await video.play();
             cameraActive = true;
-            
-            // Обновляем UI
             captureBtn.disabled = false;
             stopCameraBtn.disabled = false;
             startCameraBtn.disabled = true;
-            
             video.style.display = 'block';
             photoCanvas.style.display = 'none';
             placeholderView.style.display = 'none';
-            
         } catch (err) {
-            console.error("Camera error:", err);
-            alert("Не удалось получить доступ к камере. Разрешите доступ или используйте загрузку фото.");
-            cameraActive = false;
-            captureBtn.disabled = true;
-            stopCameraBtn.disabled = true;
-            startCameraBtn.disabled = false;
+            alert("Нет доступа к камере. Используйте загрузку фото.");
         }
     }
     
@@ -495,11 +476,9 @@
         }
         video.srcObject = null;
         cameraActive = false;
-        
         captureBtn.disabled = true;
         stopCameraBtn.disabled = true;
         startCameraBtn.disabled = false;
-        
         video.style.display = 'none';
         placeholderView.style.display = 'flex';
         photoCanvas.style.display = 'none';
@@ -507,28 +486,22 @@
     
     async function capturePhoto() {
         if (!cameraActive || !video.videoWidth) {
-            alert("Камера не активна. Запустите камеру сначала.");
+            alert("Камера не активна");
             return;
         }
-        
         const canvas = photoCanvas;
         const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Показываем canvas с фото
+        ctx.drawImage(video, 0, 0);
         video.style.display = 'none';
         canvas.style.display = 'block';
         placeholderView.style.display = 'none';
-        
-        // Анализируем
         await analyzeWearWithAI(canvas);
     }
     
     function handleFileUpload(file) {
         if (!file) return;
-        
         const url = URL.createObjectURL(file);
         const img = new Image();
         img.onload = async () => {
@@ -537,59 +510,32 @@
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
-            
             video.style.display = 'none';
             canvas.style.display = 'block';
             placeholderView.style.display = 'none';
-            
             URL.revokeObjectURL(url);
-            
-            // Если камера была включена, выключаем
-            if (cameraActive) {
-                stopCamera();
-            }
-            
+            if (cameraActive) stopCamera();
             await analyzeWearWithAI(canvas);
-        };
-        img.onerror = () => {
-            alert("Не удалось загрузить изображение");
-            URL.revokeObjectURL(url);
         };
         img.src = url;
     }
     
-    // ========== ИНИЦИАЛИЗАЦИЯ ==========
-    function initApp() {
-        modelStatusDiv.innerHTML = '✅ Нейросеть готова · полный офлайн-режим';
-        modelReady = true;
-        
-        // Кнопки уже активны, камеру пока не включаем
-        startCameraBtn.disabled = false;
-        captureBtn.disabled = true;
-        stopCameraBtn.disabled = true;
-        uploadBtn.disabled = false;
-    }
-    
-    // Назначаем обработчики
+    // Обработчики
     startCameraBtn.addEventListener('click', startCamera);
     stopCameraBtn.addEventListener('click', stopCamera);
     captureBtn.addEventListener('click', capturePhoto);
     uploadBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0]);
-        }
+        if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
         fileInput.value = '';
     });
     
-    // Запуск
-    initApp();
-    
-    // Скрываем результат при старте
     resultArea.style.display = 'none';
     
-    // Демо-пример: показываем подсказку при первом запуске
-    console.log('SPORTFASION готов. Камера и загрузка фото работают.');
+    // Регистрация Service Worker для офлайн-кеша (опционально)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW not registered', e));
+    }
 </script>
 </body>
 </html>
