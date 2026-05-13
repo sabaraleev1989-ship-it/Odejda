@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI Анализ износа одежды</title>
+    <title>RED·WEAR — AI Анализ износа одежды</title>
     <style>
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: linear-gradient(145deg, #f5f7fc 0%, #e9eef4 100%);
-            margin: 0;
+            background: #0a0303;
+            background-image: radial-gradient(circle at 15% 30%, #1f0a0a 2%, #000000 90%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Roboto', monospace;
             min-height: 100vh;
             padding: 20px 16px 32px;
             display: flex;
@@ -21,50 +23,74 @@
             align-items: center;
         }
 
+        /* Красный/черный неоновый акцент */
         .app-container {
-            max-width: 550px;
+            max-width: 580px;
             width: 100%;
             margin: 0 auto;
-            background: rgba(255,255,255,0.75);
-            backdrop-filter: blur(2px);
+            background: #0c0000dd;
+            backdrop-filter: blur(10px);
             border-radius: 48px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid #b33a3a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 15px rgba(220, 40, 40, 0.3);
             overflow: hidden;
-            padding: 20px 20px 30px;
-            transition: all 0.2s ease;
+            padding: 24px 22px 32px;
+            transition: all 0.2s;
         }
 
         h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin: 0 0 6px 0;
+            font-size: 2.1rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             text-align: center;
-            background: linear-gradient(135deg, #1e2b3c, #2c4c6b);
+            background: linear-gradient(135deg, #ff3a3a, #b01020);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.3px;
+            text-shadow: 0 0 5px rgba(255,40,40,0.3);
+            margin-bottom: 6px;
         }
 
         .sub {
             text-align: center;
-            color: #4a627a;
-            font-size: 0.9rem;
-            margin-bottom: 24px;
+            color: #e0a0a0;
+            font-size: 0.85rem;
             font-weight: 500;
+            letter-spacing: 0.3px;
+            border-bottom: 1px dashed #a52222;
+            display: inline-block;
+            width: auto;
+            margin: 0 auto 20px;
+            padding-bottom: 6px;
+        }
+
+        .demobadge {
+            background: #2c0a0a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 14px;
+            border-radius: 60px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #ff9e9e;
+            border-left: 3px solid #e32;
+            margin-top: 6px;
         }
 
         .card {
-            background: white;
+            background: #0f0505e6;
             border-radius: 32px;
-            padding: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 18px;
+            border: 1px solid #b54444;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
             margin-bottom: 24px;
+            backdrop-filter: blur(4px);
         }
 
         .camera-preview {
             position: relative;
-            background: #1e2a32;
+            background: #1a0606;
             border-radius: 28px;
             overflow: hidden;
             aspect-ratio: 4 / 3;
@@ -72,7 +98,8 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 16px;
-            border: 1px solid rgba(255,255,255,0.3);
+            border: 2px solid #b33a3a;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 5px 12px black;
         }
 
         video, #photoCanvas, .placeholder-img {
@@ -83,121 +110,146 @@
         }
 
         #photoCanvas {
-            background: #111;
+            background: #0a0000;
         }
 
         .placeholder-img {
-            background: #2d3e4e;
+            background: #140808;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 1rem;
-            text-align: center;
             flex-direction: column;
+            color: #dd8888;
+            font-weight: 500;
+            gap: 8px;
+            text-align: center;
+            font-size: 0.9rem;
         }
 
         .button-group {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin: 16px 0 8px;
+            margin: 18px 0 8px;
             justify-content: center;
         }
 
         button {
-            background: #1f3e4b;
-            border: none;
-            padding: 12px 22px;
+            background: #1f0a0a;
+            border: 1px solid #a43434;
+            padding: 12px 20px;
             border-radius: 60px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #f0c0c0;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
             transition: 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             flex: 1 0 auto;
             justify-content: center;
+            letter-spacing: 0.5px;
         }
 
         button:active {
-            transform: scale(0.97);
+            transform: scale(0.96);
         }
 
         .btn-primary {
-            background: #2c6e9e;
-            box-shadow: 0 6px 14px rgba(44,110,158,0.3);
+            background: #a11f1f;
+            border-color: #ff6a6a;
+            color: white;
+            text-shadow: 0 1px 0 #4a0000;
+            box-shadow: 0 0 8px #ff3a3a66;
         }
 
         .btn-outline {
-            background: #eef2f7;
-            color: #1f3e4b;
-            border: 1px solid #cbdae6;
+            background: #2c1010;
+            border-color: #bc5a5a;
+            color: #ffbcbc;
         }
 
         .btn-danger {
-            background: #9e5e2c;
+            background: #4a2020;
+            border-color: #b33;
+            color: #ff9e9e;
         }
 
         .result-area {
-            background: #fef9e8;
-            border-radius: 28px;
-            padding: 18px;
+            background: #0d0303e0;
+            border-radius: 36px;
+            padding: 18px 18px 22px;
             text-align: center;
-            margin-top: 8px;
+            backdrop-filter: blur(12px);
+            border: 1px solid #c54747;
+            box-shadow: 0 0 12px rgba(180, 30, 30, 0.5);
         }
 
         .wear-badge {
-            font-size: 2.1rem;
+            font-size: 2rem;
             font-weight: 800;
             display: flex;
             align-items: baseline;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
+            background: #0a0101;
+            padding: 8px 16px;
+            border-radius: 90px;
+            margin-bottom: 12px;
         }
 
         .wear-percent {
-            font-size: 3.2rem;
-            font-weight: 800;
-            color: #c4451e;
+            font-size: 3.6rem;
+            font-weight: 900;
+            color: #ff5e5e;
+            text-shadow: 0 0 12px #ff0000;
             line-height: 1;
+            letter-spacing: -2px;
         }
 
         .wear-label {
-            background: #e9eef4;
-            padding: 4px 14px;
+            background: #2c0808;
+            padding: 6px 20px;
             border-radius: 60px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 700;
+            display: inline-block;
+            color: #ffc0c0;
+            border-left: 4px solid #f33;
+            margin: 5px 0;
         }
 
         .wear-desc {
-            margin-top: 12px;
-            font-size: 1rem;
-            color: #2c3e2f;
-            background: white;
-            padding: 12px;
-            border-radius: 24px;
+            margin-top: 14px;
+            font-size: 0.92rem;
+            background: #180707b3;
+            padding: 14px;
+            border-radius: 28px;
+            color: #ffdede;
+            border: 1px solid #b33a3a;
         }
 
         .confidence {
-            font-size: 0.75rem;
-            color: #6b7c93;
+            font-size: 0.7rem;
+            color: #e0a0a0;
             margin-top: 12px;
+            background: #1f0a0a;
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 30px;
         }
 
         .spinner {
             display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255,255,255,0.3);
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255,70,70,0.3);
             border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
+            border-top-color: #ff5e5e;
+            animation: spin 0.7s linear infinite;
         }
 
         @keyframes spin {
@@ -208,27 +260,33 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            background: rgba(0,0,0,0.6);
-            border-radius: 60px;
-            padding: 8px 18px;
-            color: white;
+            gap: 10px;
+            background: #2f0a0a;
+            border-radius: 80px;
+            padding: 8px 20px;
+            color: #ffb6b6;
+            font-weight: 600;
         }
 
         footer {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             text-align: center;
-            color: #6f8eaa;
-            margin-top: 20px;
+            color: #b97777;
+            margin-top: 18px;
+            border-top: 1px dashed #a53333;
+            padding-top: 15px;
         }
 
         @media (max-width: 480px) {
             .app-container {
-                padding: 16px;
+                padding: 18px;
             }
             button {
-                padding: 10px 16px;
-                font-size: 0.85rem;
+                padding: 10px 14px;
+                font-size: 0.8rem;
+            }
+            .wear-percent {
+                font-size: 2.8rem;
             }
         }
     </style>
@@ -236,48 +294,52 @@
 <body>
 
 <div class="app-container">
-    <h1>👕 Wear&AI</h1>
-    <div class="sub">Анализ износа одежды • Любая вещь</div>
+    <h1>⛓️ RED·WEAR ⛓️</h1>
+    <div style="text-align: center;">
+        <span class="demobadge">⚡ ДЕМО-ВЕРСИЯ · AI СИМУЛЯЦИЯ ⚡</span>
+    </div>
+    <div class="sub">🧥 Универсальный анализ износа · Любая одежда</div>
 
     <div class="card">
         <div class="camera-preview" id="cameraPreview">
             <video id="video" autoplay playsinline muted style="display: none;"></video>
             <canvas id="photoCanvas" style="display: none;"></canvas>
             <div id="placeholderView" class="placeholder-img">
-                📸 Камера готова<br>нажми «Запустить камеру»
+                🔴 КАМЕРА ГОТОВА 🔴<br>
+                нажми «Запустить камеру»
             </div>
         </div>
 
         <div class="button-group">
-            <button id="startCameraBtn" class="btn-primary">📷 Запустить камеру</button>
-            <button id="captureBtn" disabled>📸 Сделать фото</button>
-            <button id="uploadBtn" class="btn-outline">🖼️ Загрузить фото</button>
+            <button id="startCameraBtn" class="btn-primary">📷 ЗАПУСТИТЬ КАМЕРУ</button>
+            <button id="captureBtn" disabled>📸 СДЕЛАТЬ ФОТО</button>
+            <button id="uploadBtn" class="btn-outline">🖼️ ЗАГРУЗИТЬ ФОТО</button>
         </div>
         <div class="button-group">
-            <button id="stopCameraBtn" class="btn-danger" disabled>⏹️ Остановить камеру</button>
+            <button id="stopCameraBtn" class="btn-danger" disabled>⛔ ОСТАНОВИТЬ КАМЕРУ</button>
         </div>
         <input type="file" id="fileInput" accept="image/*" style="display: none;">
     </div>
 
     <div class="result-area" id="resultArea" style="display: none;">
         <div class="wear-badge">
-            <span>🧥 Износ</span>
+            <span>🔥 ИЗНОС</span>
             <span class="wear-percent" id="wearPercent">0%</span>
         </div>
         <div class="wear-label" id="wearLevelLabel">—</div>
         <div class="wear-desc" id="wearDescription">
-            Сделайте фото одежды, чтобы нейросеть оценила состояние.
+            Сделайте фото одежды — нейросеть определит степень изношенности.
         </div>
         <div class="confidence" id="confidenceInfo"></div>
     </div>
     <footer>
-        🤖 AI-модель анализирует любую одежду: потертости, катышки, выцветание, разрывы и общий вид.<br>
-        Демо использует симуляцию нейросети (для реального API подключите модель).
+        🧠 <strong style="color:#ff8a8a;">ДЕМО: симуляция AI на основе визуальной текстуры.</strong> Анализирует яркость, неоднородность, выцветание и резкость — результат для любой вещи.<br>
+        📡 Для внедрения реальной модели замените analyzeWearWithAI на вызов бэкенда с нейросетью.
     </footer>
 </div>
 
 <script>
-    // ----- Переменные и элементы -----
+    // ---------- ЭЛЕМЕНТЫ ----------
     const video = document.getElementById('video');
     const photoCanvas = document.getElementById('photoCanvas');
     const placeholderView = document.getElementById('placeholderView');
@@ -292,71 +354,63 @@
     const wearDescriptionDiv = document.getElementById('wearDescription');
     const confidenceInfoSpan = document.getElementById('confidenceInfo');
 
-    let stream = null;
-    let cameraActive = false;
+    let mediaStream = null;
+    let cameraActiveFlag = false;
 
-    // ----- Вспомогательные функции UI -----
-    function disableCameraButtons(isCameraOn) {
+    // ---- UI helpers -----
+    function disableCameraUI(isCameraOn) {
         captureBtn.disabled = !isCameraOn;
         stopCameraBtn.disabled = !isCameraOn;
         startCameraBtn.disabled = isCameraOn;
-        if(!isCameraOn) {
-            // Если камера выключена – также блокируем кнопку "сделать фото"
-            captureBtn.disabled = true;
-        }
+        if (!isCameraOn) captureBtn.disabled = true;
     }
 
-    // Сброс превью и скрытие видео/холста
-    function resetPreview(mode = 'placeholder') {
+    function resetPreview(mode = 'placeholder', customMsg = null) {
         video.style.display = 'none';
         photoCanvas.style.display = 'none';
         placeholderView.style.display = 'flex';
-        if(mode === 'placeholder') {
-            placeholderView.innerHTML = '📸 Камера готова<br>нажми «Запустить камеру»';
-        } else if(mode === 'captured') {
-            // Показываем canvas, скрываем placeholder
+        if (mode === 'placeholder') {
+            placeholderView.innerHTML = customMsg || '🔴 КАМЕРА ГОТОВА 🔴<br>нажми «Запустить камеру»';
+        } else if (mode === 'captured') {
             video.style.display = 'none';
             photoCanvas.style.display = 'block';
             placeholderView.style.display = 'none';
-        } else if(mode === 'camera') {
+        } else if (mode === 'camera') {
             video.style.display = 'block';
             photoCanvas.style.display = 'none';
             placeholderView.style.display = 'none';
         }
     }
 
-    // Функция извлечения изображения (Blob/File) для отправки в AI
+    // получение Blob/File из камеры
     async function captureImageFromCamera() {
-        if (!cameraActive || !video.videoWidth) {
-            alert("Камера не активна или нет видео потока. Запустите камеру заново.");
+        if (!cameraActiveFlag || !video.videoWidth) {
+            alert("⚠️ Камера не активна или поток не готов. Запустите камеру заново.");
             return null;
         }
         const canvas = photoCanvas;
-        const context = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        // Показываем canvas с заснятым кадром
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         resetPreview('captured');
         return new Promise((resolve) => {
             canvas.toBlob((blob) => {
-                if(blob) {
-                    const file = new File([blob], "wear_photo.jpg", { type: "image/jpeg" });
+                if (blob) {
+                    const file = new File([blob], "red_wear_capture.jpg", { type: "image/jpeg" });
                     resolve(file);
                 } else {
                     resolve(null);
                 }
-            }, 'image/jpeg', 0.9);
+            }, 'image/jpeg', 0.92);
         });
     }
 
-    // Загрузить / использовать файл
-    function handleFileUpload(file) {
+    function handleUploadedFile(file) {
         if (!file) return;
         const url = URL.createObjectURL(file);
         const img = new Image();
         img.onload = () => {
-            // отобразить в canvas чтобы показать пользователю загруженное фото
             const canvas = photoCanvas;
             canvas.width = img.width;
             canvas.height = img.height;
@@ -364,245 +418,224 @@
             ctx.drawImage(img, 0, 0, img.width, img.height);
             resetPreview('captured');
             URL.revokeObjectURL(url);
-            // Анализ изображения
             analyzeWearWithAI(file);
         };
         img.src = url;
     }
 
-    // ---- СИМУЛЯЦИЯ НЕЙРОСЕТИ (Universal Wear Analysis) ----
-    // ВАЖНО: В реальном приложении здесь вызывается API нейросети (например, Send файл на бэкенд с ML моделью).
-    // Данная симуляция анализирует пиксели изображения + случайная вариация, но демонстрирует детерминированную логику.
-    // НО мы сделаем умную эвристику: загружаем изображение, анализируем общую текстуру, яркость, насыщенность,
-    // чтобы имитировать реальную работу: чем более "неоднородная" текстура / низкий контраст / наличие шума = выше износ.
-    // Используем анализ canvas: вычисляем variance, среднюю яркость, и энтропию (псевдо) - для любой одежды.
-    // Это даст убедительный универсальный ответ.
+    // ----- СИМУЛЯЦИЯ НЕЙРОСЕТИ (красно-черная эстетика, но универсальная логика) -----
+    // Реальное демо: на основе пиксельного анализа определяем износ любой одежды
+    // Комбинируем метрики: дисперсия яркости, средний градиент, цветовая насыщенность и выцветание
     async function analyzeWearWithAI(imageFile) {
-        if(!imageFile) return;
-        // Показываем индикатор загрузки
+        if (!imageFile) return;
+        // UI загрузки
         const originalDesc = wearDescriptionDiv.innerHTML;
-        wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> Анализ нейросетью...</div>';
+        wearDescriptionDiv.innerHTML = '<div class="loader-overlay"><div class="spinner"></div> 🧠 нейросеть сканирует ткань...</div>';
         resultArea.style.display = 'block';
         
-        // эмуляция задержки сети (как будто модель считает)
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 1100)); // имитация задержки вычислений
         
         try {
-            // Загружаем изображение в canvas для анализа
-            const imgBitmap = await createImageBitmap(imageFile);
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = imgBitmap.width;
-            canvas.height = imgBitmap.height;
-            ctx.drawImage(imgBitmap, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
+            const bitmap = await createImageBitmap(imageFile);
+            const canvasOff = document.createElement('canvas');
+            const ctxOff = canvasOff.getContext('2d');
+            canvasOff.width = bitmap.width;
+            canvasOff.height = bitmap.height;
+            ctxOff.drawImage(bitmap, 0, 0);
+            const imgData = ctxOff.getImageData(0, 0, canvasOff.width, canvasOff.height);
+            const data = imgData.data;
             
-            // 1. Вычисляем среднюю яркость и "разнообразие" (дисперсия)
-            let sumLum = 0, sumSq = 0;
-            let pixelCount = 0;
-            const step = Math.max(1, Math.floor(data.length / (200 * 200))); // семплирование для скорости
-            for (let i = 0; i < data.length; i += 4 * step) {
+            // 1. яркостная статистика + дисперсия (текстурная неровность)
+            let sumLum = 0, sumSqLum = 0;
+            let step = Math.max(1, Math.floor(data.length / (180 * 180)));
+            let pixelSamples = 0;
+            for (let i = 0; i < data.length; i += step * 4) {
                 const r = data[i];
                 const g = data[i+1];
                 const b = data[i+2];
-                // Яркость по формуле 0.299*R + 0.587*G + 0.114*B
                 const lum = 0.299 * r + 0.587 * g + 0.114 * b;
                 sumLum += lum;
-                sumSq += lum * lum;
-                pixelCount++;
+                sumSqLum += lum * lum;
+                pixelSamples++;
             }
-            if(pixelCount === 0) throw new Error("Не удалось проанализировать изображение");
-            const meanLum = sumLum / pixelCount;
-            const variance = (sumSq / pixelCount) - (meanLum * meanLum);
+            if (pixelSamples === 0) throw new Error("пустой кадр");
+            const meanLum = sumLum / pixelSamples;
+            const variance = (sumSqLum / pixelSamples) - (meanLum * meanLum);
             const stdDev = Math.sqrt(variance);
             
-            // 2. Дополнительно подсчитаем коэффициент "размытости/потери текстуры": отношение высокочастотных компонент (градиент)
-            // для этого пройдёмся по соседним пикселям в уменьшенной копии (но упростим: посчитаем перепады яркости)
-            let edgeSum = 0;
-            let edgeCount = 0;
-            const width = canvas.width;
+            // 2. градиентная резкость - чем ниже, тем сильнее размыто/изношено
+            const smallW = Math.min(180, canvasOff.width);
+            const smallH = Math.min(180, canvasOff.height);
             const smallCanvas = document.createElement('canvas');
-            smallCanvas.width = Math.min(200, width);
-            smallCanvas.height = Math.min(200, canvas.height);
+            smallCanvas.width = smallW;
+            smallCanvas.height = smallH;
             const sCtx = smallCanvas.getContext('2d');
-            sCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
-            const smallData = sCtx.getImageData(0, 0, smallCanvas.width, smallCanvas.height).data;
-            for (let y = 0; y < smallCanvas.height-1; y++) {
-                for (let x = 0; x < smallCanvas.width-1; x++) {
-                    const idx = (y * smallCanvas.width + x) * 4;
-                    const idxRight = (y * smallCanvas.width + (x+1)) * 4;
-                    const idxDown = ((y+1) * smallCanvas.width + x) * 4;
+            sCtx.drawImage(canvasOff, 0, 0, smallW, smallH);
+            const smallData = sCtx.getImageData(0, 0, smallW, smallH).data;
+            let totalEdge = 0;
+            let edgeCount = 0;
+            for (let y = 0; y < smallH - 1; y++) {
+                for (let x = 0; x < smallW - 1; x++) {
+                    const idx = (y * smallW + x) * 4;
+                    const idxR = (y * smallW + (x+1)) * 4;
+                    const idxD = ((y+1) * smallW + x) * 4;
                     const lum1 = 0.299*smallData[idx] + 0.587*smallData[idx+1] + 0.114*smallData[idx+2];
-                    const lumR = 0.299*smallData[idxRight] + 0.587*smallData[idxRight+1] + 0.114*smallData[idxRight+2];
-                    const lumD = 0.299*smallData[idxDown] + 0.587*smallData[idxDown+1] + 0.114*smallData[idxDown+2];
-                    const gradH = Math.abs(lum1 - lumR);
-                    const gradV = Math.abs(lum1 - lumD);
-                    edgeSum += (gradH + gradV);
+                    const lumR = 0.299*smallData[idxR] + 0.587*smallData[idxR+1] + 0.114*smallData[idxR+2];
+                    const lumD = 0.299*smallData[idxD] + 0.587*smallData[idxD+1] + 0.114*smallData[idxD+2];
+                    totalEdge += Math.abs(lum1 - lumR) + Math.abs(lum1 - lumD);
                     edgeCount += 2;
                 }
             }
-            const avgEdge = edgeCount > 0 ? edgeSum / edgeCount : 50;
+            const avgEdge = edgeCount > 0 ? totalEdge / edgeCount : 35;
             
-            // Нормализуем метрики (диапазоны: яркость 0-255, stdDev ~ 0-80 обычно, avgEdge ~ 0-100)
-            // Идея: изношенная ткань часто имеет более низкую контрастность, выцветание либо высокую вариативность из-за дефектов/катышек.
-            // Универсальная формула износа от 0 до 100.
-            // яркость: если очень блеклая >100-150? сильно выцветшая одежда увеличивает износ.
-            let brightnessWear = 0;
-            if (meanLum > 180) brightnessWear = Math.min(30, (meanLum - 170) * 1.2); // слишком светлая/выцветшая
-            else if (meanLum < 70) brightnessWear = Math.min(20, (80 - meanLum) * 0.6); // темные не всегда признак, но некторые потертости темнеют
+            // 3. цветовая насыщенность (блеклость = износ)
+            let sumSat = 0;
+            let satCount = 0;
+            for (let i = 0; i < data.length; i += 15 * 4) {
+                let r = data[i], g = data[i+1], b = data[i+2];
+                let maxC = Math.max(r,g,b);
+                let minC = Math.min(r,g,b);
+                let sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+                sumSat += sat;
+                satCount++;
+            }
+            const avgSaturation = satCount > 0 ? sumSat / satCount : 0.5;
+            const fadeScore = Math.max(0, Math.min(35, (0.6 - avgSaturation) * 70)); // чем ниже насыщенность, тем больше износ
             
-            // дисперсия (stdDev): низкое значение говорит об однородности (новая ткань), высокое значение = неоднородность из-за потертостей/зацепок (износ)
+            // 4. яркостной фактор: черезмерно светлая или тусклая "выцветшая" зона
+            let brightWear = 0;
+            if (meanLum > 170) brightWear = Math.min(28, (meanLum - 150) * 0.8);
+            else if (meanLum < 65) brightWear = Math.min(18, (75 - meanLum) * 0.5);
+            
+            // 5. Текстура на основе дисперсии: малая дисперсия = однородная новая ткань, высокая = износ/катышки
             let textureWear = 0;
-            if (stdDev < 20) textureWear = 5; // новая ткань
-            else if (stdDev > 60) textureWear = 45;
-            else textureWear = (stdDev - 20) * 1.2;
-            textureWear = Math.min(55, Math.max(0, textureWear));
+            if (stdDev < 18) textureWear = 4;
+            else if (stdDev > 68) textureWear = 52;
+            else textureWear = (stdDev - 18) * 1.15;
+            textureWear = Math.min(58, Math.max(0, textureWear));
             
-            // резкость / градиент: если средний перепад низкий => размыто, выцветание рисунка, потеря деталей (признак износа)
-            let sharpnessWear = 0;
-            if (avgEdge < 15) sharpnessWear = 40;
-            else if (avgEdge < 30) sharpnessWear = 20;
-            else if (avgEdge > 70) sharpnessWear = 5;
-            else sharpnessWear = (35 - avgEdge) * 0.7;
-            sharpnessWear = Math.min(40, Math.max(0, sharpnessWear));
+            // 6. фактор размытости / потери деталей (низкий avgEdge = износ)
+            let blurWear = 0;
+            if (avgEdge < 14) blurWear = 42;
+            else if (avgEdge < 28) blurWear = 24;
+            else if (avgEdge > 65) blurWear = 5;
+            else blurWear = (32 - avgEdge) * 1.1;
+            blurWear = Math.min(46, Math.max(0, blurWear));
             
-            // Дополнительно попробуем "colorfulness" - блеклые цвета = больше износ
-            let colorfulness = 0;
-            let rSum=0,gSum=0,bSum=0;
-            for (let i=0;i<data.length;i+=20*4){
-                rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2];
-            }
-            let avgR = rSum/(data.length/(20*4));
-            let avgG = gSum/(data.length/(20*4));
-            let avgB = bSum/(data.length/(20*4));
-            let colorSpread = Math.abs(avgR-avgG)+Math.abs(avgG-avgB)+Math.abs(avgB-avgR);
-            let fadeScore = 0;
-            if(colorSpread < 40) fadeScore = 25;
-            else if(colorSpread < 80) fadeScore = 12;
-            else fadeScore = 3;
+            // базовая сумма
+            let rawWear = brightWear + textureWear + blurWear + fadeScore;
+            // корректировка для новой одежды с чёткими краями
+            if (stdDev < 22 && avgEdge > 52 && avgSaturation > 0.55) rawWear = Math.min(rawWear, 16);
+            if (rawWear < 5) rawWear = 3;
+            rawWear = Math.min(97, Math.max(2, rawWear));
             
-            // Итоговый износ от 0 до 100 (дополнительно добавляем небольшую стохастику для реализма, но чтобы повторяемость была в пределах 5%)
-            let baseWear = brightnessWear + textureWear + sharpnessWear + fadeScore;
-            // корректировка перекоса
-            if(baseWear < 8 && (stdDev < 18 && avgEdge > 45)) baseWear = 4; // вероятно новая вещь
-            baseWear = Math.min(98, Math.max(2, baseWear));
+            // финальное округление + легкая вариация для "живости" нейросети (+- 3%)
+            let finalWear = Math.round(rawWear + (Math.sin(rawWear) * 1.2) + (Math.random() * 4 - 2));
+            finalWear = Math.min(99, Math.max(1, finalWear));
             
-            // накинем +/- 3% для "нейросетевой неопределенности", но сохраняя универсальность
-            const randomFactor = (Math.sin(baseWear * 0.7) * 2) + (Math.random() * 4 - 2);
-            let finalWear = baseWear + randomFactor;
-            finalWear = Math.min(99, Math.max(1, Math.round(finalWear)));
+            // вычисляем "уверенность" модели
+            let confidence = 70 + Math.min(22, Math.floor(stdDev / 9)) - (Math.abs(avgEdge - 35) / 12);
+            confidence = Math.min(94, Math.max(68, Math.floor(confidence)));
             
-            // Оценка уверенности (Confidence) на основе энтропии изображения и дисперсии. Чем чётче картинка и детали, тем выше уверенность
-            let confidenceScore = Math.min(95, Math.floor(50 + (stdDev / 80) * 25 + (avgEdge / 70) * 20));
-            confidenceScore = Math.min(96, Math.max(68, confidenceScore));
-            
-            // Генерация описания и уровня износа
-            let levelText = '';
+            // --- Генерация уровня и описания ---
+            let levelTitle = '';
             let description = '';
-            if (finalWear <= 15) {
-                levelText = '✨ Как новая';
-                description = 'Практически нет следов использования. Сохранены цвет, фактура и форма.';
-            } else if (finalWear <= 35) {
-                levelText = '👍 Лёгкий износ';
-                description = 'Небольшие признаки носки: лёгкая потёртость или выцветание на малозаметных участках.';
-            } else if (finalWear <= 55) {
-                levelText = '🔄 Средний износ';
-                description = 'Заметны потёртости, местами катышки или снижение яркости цвета. Актуально для повседневной носки.';
-            } else if (finalWear <= 75) {
-                levelText = '⚠️ Сильный износ';
-                description = 'Выраженное истирание ткани, возможно поредение ворса, потеря эластичности, выцветание.';
+            if (finalWear <= 14) {
+                levelTitle = '◼️ ИДЕАЛЬНОЕ СОСТОЯНИЕ';
+                description = 'Отличная сохранность: ткань без дефектов, цвет насыщенный. Признаки износа отсутствуют.';
+            } else if (finalWear <= 32) {
+                levelTitle = '🔻 ЛЁГКИЙ ИЗНОС';
+                description = 'Небольшие потёртости, едва заметное выцветание. Вещь выглядит аккуратно.';
+            } else if (finalWear <= 52) {
+                levelTitle = '⚠️ СРЕДНИЙ ИЗНОС';
+                description = 'Заметны следы носки: катышки, потёртости на сгибах, умеренное выцветание.';
+            } else if (finalWear <= 76) {
+                levelTitle = '🔥 СИЛЬНЫЙ ИЗНОС';
+                description = 'Выраженные дефекты: истончение ткани, сильное выгорание цвета, видимые повреждения.';
             } else {
-                levelText = '🪦 Критический износ';
-                description = 'Значительные дефекты: дыры, необратимые изменения, потеря формы. Одежда требует замены.';
+                levelTitle = '💀 КРИТИЧЕСКИЙ ИЗНОС';
+                description = 'Экстремальная степень износа: дыры, разрывы волокон, материал утратил форму и прочность.';
             }
             
-            // донастройка описания под картинку: добавление детекции по яркости/текстуре
-            if (brightnessWear > 18) description += ' Заметное выцветание или выгорание.';
-            if (sharpnessWear > 28) description += ' Текстура размыта, что характерно для изношенных участков.';
-            if (textureWear > 40) description += ' Сильная неоднородность ткани.';
+            if (brightWear > 18) description += ' Выраженное выцветание/выгорание.';
+            if (blurWear > 28) description += ' Текстура размыта, детали рисунка смазаны.';
+            if (textureWear > 44) description += ' Заметная неоднородность ткани (катышки / потертости).';
             
-            // Вывод результатов
             wearPercentSpan.innerText = finalWear + '%';
-            wearLevelLabel.innerText = levelText;
+            wearLevelLabel.innerText = levelTitle;
             wearDescriptionDiv.innerHTML = description;
-            confidenceInfoSpan.innerHTML = `🤖 Достоверность анализа: ${Math.floor(confidenceScore)}% • Нейросеть универсальна для любой одежды`;
+            confidenceInfoSpan.innerHTML = `🧠 Нейросеть · точность: ${confidence}% | Универсальный AI (любая одежда)`;
             
         } catch (err) {
             console.error(err);
-            wearDescriptionDiv.innerHTML = '⚠️ Ошибка анализа изображения. Попробуйте другое фото с лучшим освещением.';
+            wearDescriptionDiv.innerHTML = '❌ Ошибка анализа кадра. Используйте другое фото с хорошим освещением.';
             wearPercentSpan.innerText = '?';
-            wearLevelLabel.innerText = 'Ошибка';
-            confidenceInfoSpan.innerText = 'Нейросеть не смогла обработать кадр';
+            wearLevelLabel.innerText = 'ОШИБКА';
+            confidenceInfoSpan.innerText = 'AI не смог обработать изображение';
         }
     }
     
-    // Запуск камеры
+    // ---------- Камера ----------
     async function startCamera() {
-        if (stream) {
-            stopCamera();
-        }
+        if (mediaStream) stopCamera();
         try {
             const constraints = { video: { facingMode: "environment" }, audio: false };
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
+            mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = mediaStream;
             await video.play();
-            cameraActive = true;
-            disableCameraButtons(true);
+            cameraActiveFlag = true;
+            disableCameraUI(true);
             resetPreview('camera');
         } catch (err) {
-            console.error("Ошибка доступа к камере: ", err);
-            alert("Не удалось получить доступ к камере. Проверьте разрешения или используйте загрузку фото.");
-            cameraActive = false;
-            disableCameraButtons(false);
-            resetPreview('placeholder');
-            placeholderView.innerHTML = '❌ Нет доступа к камере<br>используйте загрузку фото';
+            console.error("Камера заблокирована", err);
+            alert("❌ Нет доступа к камере. Разрешите доступ или используйте загрузку фото.");
+            cameraActiveFlag = false;
+            disableCameraUI(false);
+            resetPreview('placeholder', '🚫 НЕТ ДОСТУПА К КАМЕРЕ\n используй загрузку фото');
         }
     }
     
     function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
         }
         video.srcObject = null;
-        cameraActive = false;
-        disableCameraButtons(false);
-        resetPreview('placeholder');
-        placeholderView.innerHTML = '📷 Камера отключена<br>нажмите "Запустить камеру"';
+        cameraActiveFlag = false;
+        disableCameraUI(false);
+        resetPreview('placeholder', '📷 КАМЕРА ОТКЛЮЧЕНА\n нажми «Запустить камеру»');
     }
     
-    async function onCapturePhoto() {
-        if (!cameraActive) {
-            alert("Сначала запустите камеру");
+    async function onCapture() {
+        if (!cameraActiveFlag) {
+            alert("Запустите камеру перед съёмкой");
             return;
         }
-        const imageFile = await captureImageFromCamera();
-        if (imageFile) {
-            await analyzeWearWithAI(imageFile);
+        const imgFile = await captureImageFromCamera();
+        if (imgFile) {
+            await analyzeWearWithAI(imgFile);
         }
     }
     
-    function onUploadClick() {
-        if (cameraActive) stopCamera();
+    function onUploadTrigger() {
+        if (cameraActiveFlag) stopCamera();
         fileInput.click();
     }
     
     fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            handleFileUpload(file);
+            handleUploadedFile(e.target.files[0]);
         }
         fileInput.value = '';
     });
     
     startCameraBtn.addEventListener('click', startCamera);
     stopCameraBtn.addEventListener('click', stopCamera);
-    captureBtn.addEventListener('click', onCapturePhoto);
-    uploadBtn.addEventListener('click', onUploadClick);
+    captureBtn.addEventListener('click', onCapture);
+    uploadBtn.addEventListener('click', onUploadTrigger);
     
-    // Инициализация: результат скрыт, камера выключена
-    disableCameraButtons(false);
+    // Инициализация
+    disableCameraUI(false);
     resultArea.style.display = 'none';
 </script>
 </body>
